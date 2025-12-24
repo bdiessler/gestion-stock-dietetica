@@ -1,0 +1,131 @@
+{% extends 'base.html' %}
+{% block title %}Editar Producto{% endblock %}
+{% block content %}
+<div class="d-flex align-items-center gap-3 mb-3">
+    <span class="bg-primary bg-opacity-10 rounded-circle d-flex align-items-center justify-content-center" style="width:48px; height:48px;">
+        <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" fill="#0d6efd" class="bi bi-box-seam" viewBox="0 0 16 16">
+          <path d="M8.186.113a1.5 1.5 0 0 0-1.372 0l-6 3A1.5 1.5 0 0 0 0 4.382V12.5A1.5 1.5 0 0 0 1 13.964l6 2.4a1.5 1.5 0 0 0 1 0l6-2.4A1.5 1.5 0 0 0 16 12.5V4.382a1.5 1.5 0 0 0-.814-1.269l-6-3zM8 1.058l6 3V4.5l-6-2.4-6 2.4V4.058l6-3zM1 5.118l6 2.4v7.324l-6-2.4V5.118zm7 9.724v-7.324l6-2.4v7.324l-6 2.4z"/>
+        </svg>
+    </span>
+    <div>
+        <h1 class="mb-0">Editar Producto</h1>
+        <div class="text-muted" style="font-size:1.1em;">Modifica los datos de <strong>{{ producto.nombre }}</strong> - <strong>{{ producto.marca }}</strong></div>
+    </div>
+</div>
+<form method="POST" enctype="multipart/form-data" class="needs-validation" novalidate autocomplete="off">
+    {{ form.csrf_token }}
+    <div class="row g-3">
+        <div class="col-12 col-md-6">
+            <label for="nombre" class="form-label" data-bs-toggle="tooltip" title="Nombre del producto (obligatorio)">Nombre</label>
+            {{ form.nombre(class_="form-control", id="nombre", placeholder="Nombre del producto", required=True) }}
+            {% for error in form.nombre.errors %}
+                <div class="invalid-feedback d-block">{{ error }}</div>
+            {% endfor %}
+        </div>
+        <div class="col-12 col-md-6">
+            <label for="marca" class="form-label" data-bs-toggle="tooltip" title="Marca del producto (obligatorio)">Marca</label>
+            {{ form.marca(class_="form-control", id="marca", placeholder="Marca del producto", required=True) }}
+            {% for error in form.marca.errors %}
+                <div class="invalid-feedback d-block">{{ error }}</div>
+            {% endfor %}
+        </div>
+        <div class="col-12">
+            <label for="descripcion" class="form-label" data-bs-toggle="tooltip" title="Descripción opcional">Descripción</label>
+            {{ form.descripcion(class_="form-control", id="descripcion", placeholder="Descripción (opcional)", rows="2") }}
+            {% for error in form.descripcion.errors %}
+                <div class="invalid-feedback d-block">{{ error }}</div>
+            {% endfor %}
+        </div>
+        <div class="col-12 col-md-6">
+            <label for="precio" class="form-label" data-bs-toggle="tooltip" title="Precio en pesos argentinos (obligatorio)">Precio</label>
+            <div class="input-group">
+                <span class="input-group-text">$</span>
+                {{ form.precio(class_="form-control", id="precio", placeholder="Precio", required=True, min="0", step="0.01", type="number") }}
+            </div>
+            {% for error in form.precio.errors %}
+                <div class="invalid-feedback d-block">{{ error }}</div>
+            {% endfor %}
+        </div>
+        <div class="col-12 col-md-6">
+            <label for="stock" class="form-label" data-bs-toggle="tooltip" title="Cantidad disponible (obligatorio)">Stock</label>
+            <div class="input-group">
+                <span class="input-group-text">#</span>
+                {{ form.stock(class_="form-control", id="stock", placeholder="Cantidad en stock", required=True, min="0", step="1", type="number") }}
+            </div>
+            {% for error in form.stock.errors %}
+                <div class="invalid-feedback d-block">{{ error }}</div>
+            {% endfor %}
+        </div>
+        <div class="col-12">
+            <label class="form-label" data-bs-toggle="tooltip" title="Selecciona una o más categorías">Categorías</label>
+            <div class="border rounded p-2" style="max-height: 160px; overflow-y: auto; background: #f8f9fa;">
+                <div class="row row-cols-2 row-cols-md-3 g-1">
+                {% for subfield in form.categorias %}
+                    <div class="col">
+                        <div class="form-check">
+                            {{ subfield(class_="form-check-input") }} {{ subfield.label(class_="form-check-label") }}
+                        </div>
+                    </div>
+                {% endfor %}
+                </div>
+            </div>
+            {% for error in form.categorias.errors %}
+                <div class="invalid-feedback d-block">{{ error }}</div>
+            {% endfor %}
+        </div>
+        <div class="col-12 col-md-6">
+            <label for="imagen" class="form-label" data-bs-toggle="tooltip" title="Imagen del producto (opcional)">Imagen</label>
+            {{ form.imagen(class_="form-control", id="imagen", accept="image/*") }}
+            <div class="mt-2">
+                {% if producto.imagen_url %}
+                    <div class="mb-2">Imagen actual:<br>
+                        <img src="{{ url_for('static', filename='uploads/productos/' + producto.imagen_url) }}" alt="{{ producto.nombre }}" class="img-thumbnail" style="max-width: 120px; max-height: 120px; object-fit:contain;">
+                        <br><small>Sube una nueva imagen para reemplazar la actual.</small>
+                    </div>
+                {% else %}
+                    <div class="mb-2"><small>No hay imagen actual. Puedes subir una.</small></div>
+                {% endif %}
+                <img id="preview-imagen" src="#" alt="Previsualización" class="img-thumbnail d-none" style="max-width:120px; max-height:120px; object-fit:contain;" />
+            </div>
+            {% for error in form.imagen.errors %}
+                <div class="invalid-feedback d-block">{{ error }}</div>
+            {% endfor %}
+        </div>
+    </div>
+    <div class="mt-4 d-flex flex-wrap align-items-center">
+        <button type="submit" class="btn btn-success me-4 mb-2">Guardar Cambios</button>
+        <div class="vr d-none d-md-block me-4" style="height:38px;"></div>
+        <button type="reset" class="btn btn-outline-secondary me-2 mb-2">Deshacer Cambios</button>
+        <a href="{{ url_for('inicio') }}" class="btn btn-outline-danger mb-2">Cancelar</a>
+    </div>
+</form>
+<script>
+// Tooltips Bootstrap
+document.addEventListener('DOMContentLoaded', function() {
+    var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+    tooltipTriggerList.forEach(function (tooltipTriggerEl) {
+        new bootstrap.Tooltip(tooltipTriggerEl);
+    });
+
+    // Previsualización de imagen
+    var inputImagen = document.getElementById('imagen');
+    var preview = document.getElementById('preview-imagen');
+    if (inputImagen && preview) {
+        inputImagen.addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (file && file.type.startsWith('image/')) {
+                const reader = new FileReader();
+                reader.onload = function(ev) {
+                    preview.src = ev.target.result;
+                    preview.classList.remove('d-none');
+                };
+                reader.readAsDataURL(file);
+            } else {
+                preview.src = '#';
+                preview.classList.add('d-none');
+            }
+        });
+    }
+});
+</script>
+{% endblock %}

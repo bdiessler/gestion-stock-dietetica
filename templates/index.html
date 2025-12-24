@@ -1,0 +1,378 @@
+{% extends 'base.html' %}
+{% block title %}Inventario Dietética{% endblock %}
+{% block content %}
+    <style>
+    /* Solo la clase .vista-oculta controla la visibilidad de las vistas */
+    .vista-oculta { display: none !important; }
+    </style>
+    <div class="d-flex align-items-center gap-3 mb-3">
+        <span class="bg-primary bg-opacity-10 rounded-circle d-flex align-items-center justify-content-center" style="width:48px; height:48px;">
+            <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" fill="#0d6efd" class="bi bi-box-seam" viewBox="0 0 16 16">
+              <path d="M8.186.113a1.5 1.5 0 0 0-1.372 0l-6 3A1.5 1.5 0 0 0 0 4.382V12.5A1.5 1.5 0 0 0 1 13.964l6 2.4a1.5 1.5 0 0 0 1 0l6-2.4A1.5 1.5 0 0 0 16 12.5V4.382a1.5 1.5 0 0 0-.814-1.269l-6-3zM8 1.058l6 3V4.5l-6-2.4-6 2.4V4.058l6-3zM1 5.118l6 2.4v7.324l-6-2.4V5.118zm7 9.724v-7.324l6-2.4v7.324l-6 2.4z"/>
+            </svg>
+        </span>
+        <div>
+            <h1 class="mb-0">Inventario de Productos
+                <span class="badge bg-primary bg-opacity-75 ms-2 align-middle" style="font-size:1rem;">{{ total_productos }}</span>
+            </h1>
+            <div class="text-muted" style="font-size:1.1em;">Gestiona, busca y edita los productos de tu dietética</div>
+        </div>
+    </div>
+    <p>¡Hola, {{ nombre_usuario }}!</p>
+    <div class="mb-3 d-flex gap-2">
+        <a href="{{ url_for('agregar_producto') }}" class="btn btn-success">Agregar Nuevo Producto</a>
+        <a href="{{ url_for('gestionar_categorias') }}" class="btn btn-secondary">Gestionar Categorías</a>
+    </div>
+    <form class="row g-2 align-items-end mb-4" action="{{ url_for('inicio') }}" method="GET">
+        <div class="row mb-1">
+            <div class="col-md-4">
+                <label for="q" class="form-label">Buscar por nombre o marca</label>
+            </div>
+            <div class="col-md-4">
+                <label class="form-label">Filtrar por categorías</label>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label" for="logic_type_select">Lógica de filtro</label>
+            </div>
+            <div class="col-md-2">
+                <!-- Espacio para alinear el botón Buscar/Limpiar -->
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-md-4">
+                <input type="text" class="form-control" id="q" name="q" placeholder="Buscar..." value="{{ request.args.get('q', '') }}">
+            </div>
+            <div class="col-md-4">
+                <div class="dropdown" style="position:relative;">
+                    <button class="btn btn-outline-success dropdown-toggle w-100 text-start" type="button" id="dropdownCategorias" data-bs-toggle="dropdown" aria-expanded="false">
+                        Categorías
+                    </button>
+                    <ul class="dropdown-menu w-100 p-2" aria-labelledby="dropdownCategorias" style="max-height: 180px; overflow-y: auto;">
+                        {% for cat_id, cat_nombre in todas_las_categorias_disponibles %}
+                        <li>
+                            <div class="form-check">
+                                <input class="form-check-input categoria-checkbox" type="checkbox" name="categorias_filtro" value="{{ cat_id }}" id="cat{{ cat_id }}" data-nombre="{{ cat_nombre }}" {% if cat_id in selected_category_ids_filter %}checked{% endif %} data-dropdown-stayopen>
+                                <label class="form-check-label ms-1" for="cat{{ cat_id }}" data-dropdown-stayopen>{{ cat_nombre }}</label>
+                            </div>
+                        </li>
+                        {% endfor %}
+                    <!-- Evitar cierre automático del dropdown -->
+                    <ul class="dropdown-menu w-100 p-2" aria-labelledby="dropdownCategorias" style="max-height: 180px; overflow-y: auto;" data-bs-auto-close="false">
+                    </ul>
+                </div>
+                <!-- Badges de categorías seleccionadas debajo del filtro de categorías, sin desalinear el cuadro -->
+                <div class="mt-2" id="badges-categorias" style="min-height: 32px; overflow-x: auto; white-space: nowrap;">
+                    {% for cat_id, cat_nombre in todas_las_categorias_disponibles %}
+                        {% if cat_id in selected_category_ids_filter %}
+                            <span class="badge bg-secondary me-1 mb-1">{{ cat_nombre }}</span>
+                        {% endif %}
+                    {% endfor %}
+                </div>
+                <script>
+                document.addEventListener('DOMContentLoaded', function() {
+                    const checkboxes = document.querySelectorAll('.categoria-checkbox');
+                    const badgesContainer = document.getElementById('badges-categorias');
+                    function updateBadges() {
+                        badgesContainer.innerHTML = '';
+                        checkboxes.forEach(function(checkbox) {
+                            if (checkbox.checked) {
+                                const span = document.createElement('span');
+                                span.className = 'badge bg-secondary me-1 mb-1';
+                                span.textContent = checkbox.getAttribute('data-nombre');
+                                badgesContainer.appendChild(span);
+                            }
+                        });
+                    }
+                    checkboxes.forEach(function(checkbox) {
+                        checkbox.addEventListener('change', updateBadges);
+                    });
+
+                    // Evitar que el dropdown se cierre al hacer click en el label o checkbox
+                    const dropdownMenu = document.querySelector('#dropdownCategorias + .dropdown-menu');
+                    if (dropdownMenu) {
+                        dropdownMenu.addEventListener('click', function(e) {
+                            if (e.target.hasAttribute('data-dropdown-stayopen')) {
+                                e.stopPropagation();
+                                if (e.target.classList.contains('form-check-label')) {
+                                    e.preventDefault();
+                                    const forId = e.target.getAttribute('for');
+                                    if (forId) {
+                                        const checkbox = document.getElementById(forId);
+                                        if (checkbox) {
+                                            checkbox.checked = !checkbox.checked;
+                                            checkbox.dispatchEvent(new Event('change', {bubbles:true}));
+                                        }
+                                    }
+                                }
+                            }
+                        });
+                    }
+                });
+                </script>
+            </div>
+            <div class="col-md-2">
+                <div class="dropdown w-100">
+                    <input type="hidden" name="logic_type" id="logic_type_input" value="{{ logic_type_filter }}">
+                    <button class="btn btn-outline-secondary dropdown-toggle w-100 text-start" type="button" id="logicTypeDropdown" data-bs-toggle="dropdown" aria-expanded="false" style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:100%;">
+                        <span style="display:inline-block; max-width:90%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; vertical-align:middle;">
+                        {% if logic_type_filter == 'and' %}
+                            Coincidir <b>todas</b> las categorías seleccionadas
+                        {% else %}
+                            Coincidir <b>alguna</b> de las categorías seleccionadas
+                        {% endif %}
+                        </span>
+                    </button>
+                    <ul class="dropdown-menu w-100" aria-labelledby="logicTypeDropdown" style="max-width:100%; min-width:0;">
+                        <li>
+                            <a class="dropdown-item{% if logic_type_filter == 'and' %} active{% endif %}" href="#" data-value="and" style="max-width:350px; white-space:normal; word-break:break-word;">Coincidir <b>todas</b> las categorías seleccionadas</a>
+                        </li>
+                        <li>
+                            <a class="dropdown-item{% if logic_type_filter == 'or' %} active{% endif %}" href="#" data-value="or" style="max-width:350px; white-space:normal; word-break:break-word;">Coincidir <b>alguna</b> de las categorías seleccionadas</a>
+                        </li>
+                    </ul>
+                </div>
+                <script>
+                document.addEventListener('DOMContentLoaded', function() {
+                    var logicTypeInput = document.getElementById('logic_type_input');
+                    var logicTypeDropdown = document.getElementById('logicTypeDropdown');
+                    var logicTypeMenu = logicTypeDropdown ? logicTypeDropdown.nextElementSibling : null;
+                    if (logicTypeMenu) {
+                        logicTypeMenu.querySelectorAll('.dropdown-item').forEach(function(item) {
+                            item.addEventListener('click', function(e) {
+                                e.preventDefault();
+                                var value = this.getAttribute('data-value');
+                                logicTypeInput.value = value;
+                                logicTypeDropdown.innerHTML = this.innerHTML;
+                                logicTypeMenu.querySelectorAll('.dropdown-item').forEach(function(i) { i.classList.remove('active'); });
+                                this.classList.add('active');
+                            });
+                        });
+                    }
+                });
+                </script>
+            </div>
+            <div class="col-md-2 d-flex gap-2">
+                <div class="d-flex w-100" style="gap:8px;">
+                    <button type="submit" class="btn btn-primary w-50" style="height: 38px;">Buscar</button>
+                    {% if request.args.get('q') or selected_category_ids_filter %}
+                        <a href="{{ url_for('inicio') }}" class="btn btn-outline-secondary w-50" style="height: 38px;">Limpiar</a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </form>
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h2 class="mb-0">Listado de Productos</h2>
+        <div class="btn-group" role="group" aria-label="Selector de vista">
+            <button id="btnVistaTabla" type="button" class="btn btn-outline-primary btn-sm" title="Vista de lista">
+                <span class="bi bi-list-ul"></span>
+            </button>
+            <button id="btnVistaCards" type="button" class="btn btn-outline-primary btn-sm" title="Vista de cartas">
+                <span class="bi bi-grid-fill"></span>
+            </button>
+        </div>
+    </div>
+    {% if productos %}
+    <!-- Vista Cards -->
+    <div id="vista-cards" class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-4 vista-oculta">
+        {% for producto in productos %}
+        <div class="col">
+            <div class="card h-100 shadow-sm">
+                <div class="row g-0 h-100">
+                    <div class="col-4 d-flex align-items-center justify-content-center bg-light" style="min-height:140px;">
+                        {% if producto.imagen_url %}
+                            <img src="{{ url_for('static', filename='uploads/productos/' + producto.imagen_url) }}" alt="{{ producto.nombre }}" class="img-fluid rounded-start" style="max-height:120px; object-fit:contain;">
+                        {% else %}
+                            <span class="text-muted" style="font-size:0.9em;">Sin Imagen</span>
+                        {% endif %}
+                    </div>
+                    <div class="col-8">
+                        <div class="card-body d-flex flex-column h-100">
+                            <div class="d-flex justify-content-between align-items-start mb-1">
+                                <h5 class="card-title mb-0 fw-bold">{{ producto.nombre }}</h5>
+                                <span class="badge bg-primary">ID {{ producto.id }}</span>
+                            </div>
+                            <div class="mb-1"><span class="fw-bold">Marca:</span> {{ producto.marca }}</div>
+                            <div class="mb-1"><span class="fw-bold">Precio:</span> ${{ "%.2f"|format(producto.precio) }}</div>
+                            <div class="mb-1"><span class="fw-bold">Stock:</span> {{ producto.stock }}</div>
+                            <div class="mb-1"><span class="fw-bold">Descripción:</span> {{ producto.descripcion if producto.descripcion else 'N/A' }}</div>
+                            <div class="mb-2">
+                                <span class="fw-bold">Categorías:</span>
+                                {% if producto.categorias %}
+                                    {% for categoria in producto.categorias %}
+                                        <span class="badge bg-secondary me-1">{{ categoria.nombre }}</span>
+                                    {% endfor %}
+                                {% else %}
+                                    <span class="text-muted">Sin categorías</span>
+                                {% endif %}
+                            </div>
+                            <div class="mt-auto d-flex gap-2">
+                                <a href="{{ url_for('editar_producto', id=producto.id) }}" class="btn btn-sm btn-success" title="Editar">
+                                    <span class="bi bi-pencil-fill"></span>
+                                </a>
+                                <form class="d-inline" method="POST" action="{{ url_for('eliminar_producto', id=producto.id) }}">
+                                    <button type="submit" class="btn btn-sm btn-danger" onclick="return confirm('¿Estás seguro de que quieres eliminar {{ producto.nombre }} de {{ producto.marca }}?')" title="Eliminar">
+                                        <span class="bi bi-trash-fill"></span>
+                                    </button>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    <!-- Vista Tabla -->
+    <div id="vista-tabla" class="table-responsive vista-oculta">
+        <table class="table table-striped align-middle" style="table-layout:fixed; width:100%;">
+            <thead>
+                <tr>
+                    <th style="width: 50px;">
+                        <a href="{{ url_for('inicio', page=pagination.page, q=search_query, sort_by='id', order='asc' if sort_by != 'id' or order == 'desc' else 'desc', categorias_filtro=selected_category_ids_filter, logic_type=logic_type_filter) }}" class="text-decoration-none text-dark">
+                            ID
+                            {% if sort_by == 'id' %}
+                                {% if order == 'asc' %}<span class="bi bi-caret-up-fill"></span>{% else %}<span class="bi bi-caret-down-fill"></span>{% endif %}
+                            {% endif %}
+                        </a>
+                    </th>
+                    <th style="width: 90px;">Imagen</th>
+                    <th style="width: 160px;">
+                        <a href="{{ url_for('inicio', page=pagination.page, q=search_query, sort_by='nombre', order='asc' if sort_by != 'nombre' or order == 'desc' else 'desc', categorias_filtro=selected_category_ids_filter, logic_type=logic_type_filter) }}" class="text-decoration-none text-dark">
+                            Nombre
+                            {% if sort_by == 'nombre' %}
+                                {% if order == 'asc' %}<span class="bi bi-caret-up-fill"></span>{% else %}<span class="bi bi-caret-down-fill"></span>{% endif %}
+                            {% endif %}
+                        </a>
+                    </th>
+                    <th style="width: 120px;">
+                        <a href="{{ url_for('inicio', page=pagination.page, q=search_query, sort_by='marca', order='asc' if sort_by != 'marca' or order == 'desc' else 'desc', categorias_filtro=selected_category_ids_filter, logic_type=logic_type_filter) }}" class="text-decoration-none text-dark">
+                            Marca
+                            {% if sort_by == 'marca' %}
+                                {% if order == 'asc' %}<span class="bi bi-caret-up-fill"></span>{% else %}<span class="bi bi-caret-down-fill"></span>{% endif %}
+                            {% endif %}
+                        </a>
+                    </th>
+                    <th style="width: 220px;">Descripción</th>
+                    <th style="width: 90px;">
+                        <a href="{{ url_for('inicio', page=pagination.page, q=search_query, sort_by='precio', order='asc' if sort_by != 'precio' or order == 'desc' else 'desc', categorias_filtro=selected_category_ids_filter, logic_type=logic_type_filter) }}" class="text-decoration-none text-dark">
+                            Precio
+                            {% if sort_by == 'precio' %}
+                                {% if order == 'asc' %}<span class="bi bi-caret-up-fill"></span>{% else %}<span class="bi bi-caret-down-fill"></span>{% endif %}
+                            {% endif %}
+                        </a>
+                    </th>
+                    <th style="width: 70px;">
+                        <a href="{{ url_for('inicio', page=pagination.page, q=search_query, sort_by='stock', order='asc' if sort_by != 'stock' or order == 'desc' else 'desc', categorias_filtro=selected_category_ids_filter, logic_type=logic_type_filter) }}" class="text-decoration-none text-dark">
+                            Stock
+                            {% if sort_by == 'stock' %}
+                                {% if order == 'asc' %}<span class="bi bi-caret-up-fill"></span>{% else %}<span class="bi bi-caret-down-fill"></span>{% endif %}
+                            {% endif %}
+                        </a>
+                    </th>
+                    <th style="width: 140px;">Categorías</th>
+                    <th style="width: 110px;">Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for producto in productos %}
+                <tr>
+                    <td>{{ producto.id }}</td>
+                    <td style="width:90px; text-align:center;">
+                        <div style="width:70px; height:70px; display:flex; align-items:center; justify-content:center; margin:auto;">
+                            {% if producto.imagen_url %}
+                                <img src="{{ url_for('static', filename='uploads/productos/' + producto.imagen_url) }}" alt="{{ producto.nombre }}" class="img-thumbnail" style="max-width: 70px; max-height: 70px; object-fit:contain;">
+                            {% else %}
+                                <span class="text-muted" style="font-size:0.9em;">Sin Imagen</span>
+                            {% endif %}
+                        </div>
+                    </td>
+                    <td>{{ producto.nombre }}</td>
+                    <td>{{ producto.marca }}</td>
+                    <td>{{ producto.descripcion if producto.descripcion else 'N/A' }}</td>
+                    <td>${{ "%.2f"|format(producto.precio) }}</td>
+                    <td>{{ producto.stock }}</td>
+                    <td>
+                        {% if producto.categorias %}
+                            {% for categoria in producto.categorias %}
+                                <span class="badge bg-secondary">{{ categoria.nombre }}</span>
+                            {% endfor %}
+                        {% else %}
+                            <span class="text-muted">Sin categorías</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        <a href="{{ url_for('editar_producto', id=producto.id) }}" class="btn btn-sm btn-success align-middle" style="vertical-align:middle;" title="Editar">
+                            <span class="bi bi-pencil-fill"></span>
+                        </a>
+                        <form class="d-inline align-middle" style="vertical-align:middle;" method="POST" action="{{ url_for('eliminar_producto', id=producto.id) }}">
+                            <button type="submit" class="btn btn-sm btn-danger align-middle" style="vertical-align:middle;" onclick="return confirm('¿Estás seguro de que quieres eliminar {{ producto.nombre }} de {{ producto.marca }}?')" title="Eliminar">
+                                <span class="bi bi-trash-fill"></span>
+                            </button>
+                        </form>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    <nav aria-label="Paginación" class="mt-4">
+        <ul class="pagination justify-content-center">
+            <li class="page-item {% if not pagination.has_prev %}disabled{% endif %}">
+                <a class="page-link" href="{{ url_for('inicio', page=pagination.prev_num, q=search_query, sort_by=sort_by, order=order, categorias_filtro=selected_category_ids_filter, logic_type=logic_type_filter) if pagination.has_prev else '#' }}">Anterior</a>
+            </li>
+            {% for page_num in pagination.iter_pages(left_edge=1, right_edge=1, left_current=2, right_current=2) %}
+                {% if page_num %}
+                    <li class="page-item {% if page_num == pagination.page %}active{% endif %}">
+                        <a class="page-link" href="{{ url_for('inicio', page=page_num, q=search_query, sort_by=sort_by, order=order, categorias_filtro=selected_category_ids_filter, logic_type=logic_type_filter) }}">{{ page_num }}</a>
+                    </li>
+                {% else %}
+                    <li class="page-item disabled"><span class="page-link">...</span></li>
+                {% endif %}
+            {% endfor %}
+            <li class="page-item {% if not pagination.has_next %}disabled{% endif %}">
+                <a class="page-link" href="{{ url_for('inicio', page=pagination.next_num, q=search_query, sort_by=sort_by, order=order, categorias_filtro=selected_category_ids_filter, logic_type=logic_type_filter) if pagination.has_next else '#' }}">Siguiente</a>
+            </li>
+        </ul>
+    </nav>
+    {% else %}
+        <div class="alert alert-info">No hay productos en el inventario aún.</div>
+    {% endif %}
+    <script>
+    // Alternar entre vista de cards y tabla con dos botones, guardar preferencia en localStorage
+    document.addEventListener('DOMContentLoaded', function() {
+        const btnCards = document.getElementById('btnVistaCards');
+        const btnTabla = document.getElementById('btnVistaTabla');
+        const cards = document.getElementById('vista-cards');
+        const tabla = document.getElementById('vista-tabla');
+        // Oculta ambas vistas por defecto solo si hay JS
+        cards.classList.add('vista-oculta');
+        tabla.classList.add('vista-oculta');
+        function setView(view) {
+            cards.classList.add('vista-oculta');
+            tabla.classList.add('vista-oculta');
+            // Siempre quitamos display:none para que solo la clase controle la visibilidad
+            cards.style.display = '';
+            tabla.style.display = '';
+            if (view === 'tabla') {
+                tabla.classList.remove('vista-oculta');
+                btnTabla.classList.add('active');
+                btnCards.classList.remove('active');
+            } else {
+                cards.classList.remove('vista-oculta');
+                btnCards.classList.add('active');
+                btnTabla.classList.remove('active');
+            }
+            localStorage.setItem('inventarioVista', view);
+        }
+        let vista = localStorage.getItem('inventarioVista') || 'tabla';
+        setView(vista);
+        btnCards.addEventListener('click', function() {
+            setView('cards');
+        });
+        btnTabla.addEventListener('click', function() {
+            setView('tabla');
+        });
+    });
+    </script>
+{% endblock %}

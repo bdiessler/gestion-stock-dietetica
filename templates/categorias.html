@@ -1,0 +1,89 @@
+{% extends 'base.html' %}
+{% block title %}Gestionar Categorías{% endblock %}
+{% block content %}
+        <div class="d-flex align-items-center gap-3 mb-3">
+            <span class="bg-primary bg-opacity-10 rounded-circle d-flex align-items-center justify-content-center" style="width:48px; height:48px;">
+                <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" fill="#0d6efd" class="bi bi-tags" viewBox="0 0 16 16">
+                  <path d="M3 2a1 1 0 0 0-1 1v2.586a1 1 0 0 0 .293.707l6.586 6.586a2 2 0 0 0 2.828 0l2.586-2.586a2 2 0 0 0 0-2.828L7.707 2.293A1 1 0 0 0 7 2H3zm1 1h3.586l6.293 6.293a1 1 0 0 1 0 1.414l-2.586 2.586a1 1 0 0 1-1.414 0L2.293 6.707A1 1 0 0 1 2 6.293V3a1 1 0 0 1 1-1z"/>
+                  <path d="M5.5 5.5a1 1 0 1 1-2 0 1 1 0 0 1 2 0z"/>
+                </svg>
+            </span>
+            <div>
+                <h1 class="mb-0">Gestionar Categorías
+                    <span class="badge bg-primary bg-opacity-75 ms-2 align-middle" style="font-size:1rem;">{{ categorias|length }}</span>
+                </h1>
+                <div class="text-muted" style="font-size:1.1em;">Organiza y edita las categorías de tus productos</div>
+            </div>
+        </div>
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">{{ message }}<button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Cerrar"></button></div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+        <div class="card shadow-sm mb-4" style="max-width: 900px; margin: 0 auto; background: #fcfcfd;">
+            <div class="card-body">
+                <h5 class="card-title mb-3">Agregar Nueva Categoría</h5>
+                <form method="POST" class="row g-2 align-items-end">
+                    {{ form.csrf_token }}
+                    <div class="col-12 col-md-8">
+                        {{ form.nombre.label(class_="form-label") }}
+                        {{ form.nombre(class_="form-control") }}
+                        {% for error in form.nombre.errors %}
+                            <div class="text-danger small">{{ error }}</div>
+                        {% endfor %}
+                    </div>
+                    <div class="col-12 col-md-4">
+                        {{ form.submit(class_="btn btn-primary w-100") }}
+                    </div>
+                </form>
+            </div>
+        </div>
+        <div class="card shadow-sm" style="max-width: 900px; margin: 0 auto; background: #fcfcfd;">
+            <div class="card-body">
+                <h5 class="card-title mb-3">Categorías Existentes</h5>
+                {% if categorias %}
+                    <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0" style="min-width: 500px;">
+                        <thead class="table-light">
+                            <tr>
+                                <th style="width:60px;">ID</th>
+                                <th>Nombre</th>
+                                <th style="width:120px;">Productos</th>
+                                <th style="width:120px;">Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for categoria in categorias %}
+                                <tr>
+                                    <td class="fw-bold">{{ categoria.id }}</td>
+                                    <td class="fs-6">{{ categoria.nombre }}</td>
+                                    <td><span class="badge bg-secondary fs-6">{{ categoria.productos.count() }}</span></td>
+                                    <td>
+                                        <a href="{{ url_for('editar_categoria', id=categoria.id) }}" class="btn btn-sm btn-success me-2" title="Editar">
+                                            <span class="bi bi-pencil-fill"></span>
+                                        </a>
+                                        <form class="d-inline" method="POST" action="{{ url_for('eliminar_categoria', id=categoria.id) }}">
+                                            <button type="submit" class="btn btn-sm btn-danger" onclick="return confirm('¿Estás seguro de que quieres eliminar la categoría {{ categoria.nombre }}? Si tiene productos asociados, no se eliminará.')" title="Eliminar">
+                                                <span class="bi bi-trash-fill"></span>
+                                            </button>
+                                        </form>
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                    </div>
+                {% else %}
+                    <div class="alert alert-info d-flex align-items-center gap-2 mb-0" role="alert">
+                        <span class="bi bi-info-circle fs-4 text-primary"></span>
+                        No hay categorías aún. ¡Agrega una!
+                    </div>
+                {% endif %}
+</div>
+</div>
+<div class="d-flex justify-content-end mt-4" style="max-width: 900px; margin: 0 auto;">
+    <a href="{{ url_for('inicio') }}" class="btn btn-secondary">Volver al Inventario</a>
+</div>
+{% endblock %}
