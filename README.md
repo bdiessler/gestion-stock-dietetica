@@ -26,7 +26,7 @@ Durante el desarrollo me enfoqué en resolver la gestión de productos y sus cat
 *   **Manejo de Archivos**: Se configuró la subida de imágenes asegurando nombres de archivo únicos mediante la librería `uuid` y `secure_filename` para evitar problemas de seguridad o colisiones de nombres.
 
 
-## Capturas de pantalla
+## Screenshots
 
 ![Productos en vista de lista](screenshots/index.png)
 ![Productos en vista de cards](screenshots/index2.png)
